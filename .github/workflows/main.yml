@@ -26,10 +26,17 @@ jobs:
           cp -R /tmp/ios-sdks/iPhoneOS9.3.sdk "$THEOS/sdks/"
           echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
+      - name: Debug - List repo contents
+        run: |
+          echo "=== Repository structure ==="
+          ls -la
+          echo "=== iphonedeb directory ==="
+          ls -la iphonedeb/ || echo "iphonedeb directory not found"
+
       - name: Build .deb
-        working-directory: iphonedeb
         run: |
           export THEOS=$HOME/theos
+          cd iphonedeb
           make clean
           make package V=1
 
