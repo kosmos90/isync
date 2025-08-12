@@ -12,7 +12,7 @@ jobs:
     runs-on: macos-latest
     
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0  # Get full git history for versioning
     
@@ -70,7 +70,7 @@ jobs:
         find . -name "*.deb" -ls
     
     - name: Upload package artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: iSyncOverlay-deb
         path: iphonedeb/packages/*.deb
