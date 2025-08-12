@@ -1,4 +1,4 @@
-name: Build iSyncOverlay .deb (Theos)
+name: Build iSyncOverlay.deb (Theos)
 
 on:
   workflow_dispatch:
@@ -24,13 +24,12 @@ jobs:
           mkdir -p "$THEOS/sdks"
           git clone --depth=1 https://github.com/theos/sdks.git /tmp/ios-sdks
           cp -R /tmp/ios-sdks/iPhoneOS9.3.sdk "$THEOS/sdks/"
-          echo "export THEOS=$HOME/theos" >> $GITHUB_ENV
+          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
 
       - name: Build .deb
         working-directory: iphonedeb
-        env:
-          THEOS: ${{ env.THEOS }}
         run: |
+          export THEOS=$HOME/theos
           make clean
           make package V=1
 
