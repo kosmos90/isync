@@ -1,0 +1,41 @@
+name: Build iSyncOverlay .deb (Theos)
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: macos-13
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install deps
+        run: |
+          brew update
+          brew install ldid make
+
+      - name: Setup Theos
+        run: |
+          export THEOS=$HOME/theos
+          git clone --depth=1 https://github.com/theos/theos.git "$THEOS"
+          mkdir -p "$THEOS/sdks"
+          git clone --depth=1 https://github.com/theos/sdks.git /tmp/ios-sdks
+          cp -R /tmp/ios-sdks/iPhoneOS9.3.sdk "$THEOS/sdks/"
+          echo "export THEOS=$HOME/theos" >> $GITHUB_ENV
+
+      - name: Build .deb
+        working-directory: iphonedeb
+        env:
+          THEOS: ${{ env.THEOS }}
+        run: |
+          make clean
+          make package V=1
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: iSyncOverlay-deb
+          path: iphonedeb/packages/*.deb
