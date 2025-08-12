@@ -1,0 +1,17 @@
+paramiko>=3.4.0
+Pillow>=10.0.0
+
+# Optional, for drag-and-drop support on Windows/macOS/Linux
+# Uncomment to enable DnD in JAILFR3E tab:
+tkinterdnd2>=0.4.2
+
+#DEV NOTES. Please, ignore.
+#protube
+#8bit
+#idrink
+#slitherio
+#messenger
+#trueskate
+#cuttherope
+#osu
+#talkingben
