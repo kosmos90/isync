@@ -1,47 +1,77 @@
-name: Build iSyncOverlay.deb (Theos)
+name: Build iSync Tweak
 
 on:
-  workflow_dispatch:
   push:
-    branches: [ main, master ]
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   build:
-    runs-on: macos-13
+    runs-on: macos-latest
+    
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    - uses: actions/checkout@v3
+      with:
+        fetch-depth: 0  # Get full git history for versioning
+    
+    - name: Set up Theos
+      run: |
+        # Install Xcode command line tools
+        xcode-select --install || true
+        
+        # Setup Theos
+        export THEOS="${HOME}/theos"
+        git clone --depth=1 --branch=master https://github.com/theos/theos.git "${THEOS}"
+        
+        # Install dependencies
+        brew install ldid xz
+        
+        # Download iOS SDK (using a known working version)
+        mkdir -p "${THEOS}/sdks"
+        curl -L https://github.com/theos/sdks/archive/master.zip -o sdks.zip
+        unzip -q sdks.zip
+        mv sdks-master/*.sdk "${THEOS}/sdks/" 2>/dev/null || true
+        
+        # Set environment variables
+        echo "THEOS=${THEOS}" >> $GITHUB_ENV
+        echo "THEOS_MAKE_PARALLEL=no" >> $GITHUB_ENV
+        echo "THEOS_PLATFORM_SDK_ROOT=/Applications/Xcode.app/Contents/Developer/Platforms/iPhoneOS.platform/Developer" >> $GITHUB_ENV
+        echo "SDKROOT=${THEOS_PLATFORM_SDK_ROOT}/SDKs/iPhoneOS.sdk" >> $GITHUB_ENV
+        echo "CFLAGS=-isysroot ${SDKROOT} -I${THEOS}/include" >> $GITHUB_ENV
+        echo "LDFLAGS=-F${SDKROOT}/System/Library/Frameworks -F${SDKROOT}/System/Library/PrivateFrameworks" >> $GITHUB_ENV
+        echo "PATH=${THEOS}/bin:${THEOS}/vendor/bin:${PATH}" >> $GITHUB_ENV
+    
+    - name: Debug - List repo contents
+      run: |
+        echo "=== Repository structure ==="
+        ls -la
+        echo "=== iphonedeb directory ==="
+        ls -la iphonedeb/ || echo "iphonedeb directory not found"
 
-      - name: Install deps
-        run: |
-          brew update
-          brew install ldid make
-
-      - name: Setup Theos
-        run: |
-          export THEOS=$HOME/theos
-          git clone --depth=1 https://github.com/theos/theos.git "$THEOS"
-          mkdir -p "$THEOS/sdks"
-          git clone --depth=1 https://github.com/theos/sdks.git /tmp/ios-sdks
-          cp -R /tmp/ios-sdks/iPhoneOS9.3.sdk "$THEOS/sdks/"
-          echo "THEOS=$HOME/theos" >> $GITHUB_ENV
-
-      - name: Debug - List repo contents
-        run: |
-          echo "=== Repository structure ==="
-          ls -la
-          echo "=== iphonedeb directory ==="
-          ls -la iphonedeb/ || echo "iphonedeb directory not found"
-
-      - name: Build .deb
-        run: |
-          export THEOS=$HOME/theos
-          cd iphonedeb
-          make clean
-          make package V=1
-
-      - name: Upload artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: iSyncOverlay-deb
-          path: iphonedeb/packages/*.deb
+    - name: Build package
+      run: |
+        # Debug: Show environment
+        env | sort
+        
+        # Go to project directory
+        cd iphonedeb
+        
+        # Clean and build
+        make clean
+        make package \
+            ARCHS="armv7 armv7s arm64" \
+            TARGET=iphone:clang:latest:9.0 \
+            THEOS_PACKAGE_SCHEME=rootless \
+            V=1
+        
+        # List built packages
+        find . -name "*.deb" -ls
+    
+    - name: Upload package artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: iSyncOverlay-deb
+        path: iphonedeb/packages/*.deb
+        if-no-files-found: error
